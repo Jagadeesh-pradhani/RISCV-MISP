@@ -1,4 +1,4 @@
-module PC_Module(clk,rst,PC,NPC);
+module PC_Module(clk,rst,NPC,PC);
     input clk,rst;
     input [31:0] NPC;
     output [31:0] PC;
