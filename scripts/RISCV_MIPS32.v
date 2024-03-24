@@ -82,7 +82,7 @@ module RISCV_FULL(clk1, clk2);
 
             case (ID_EX_type)
                 RR_ALU : begin
-                    case (ID_EX_type[31:26])        //opcode
+                    case (ID_EX_IR[31:26])        //opcode
                         ADD     : EX_MEM_ALUout <= #2 ID_EX_A + ID_EX_B;
                         SUB     : EX_MEM_ALUout <= #2 ID_EX_A - ID_EX_B;
                         AND     : EX_MEM_ALUout <= #2 ID_EX_A & ID_EX_B;
@@ -113,6 +113,39 @@ module RISCV_FULL(clk1, clk2);
                 end
             endcase
         end
+    end
+
+    //------MEM------//
+    always @(posedge clk2) begin
+        if (HALTED == 0) begin
+            MEM_WB_type     <= EX_MEM_type;
+            MEM_WB_IR       <= #2 EX_MEM_IR;
+
+            case (EX_MEM_type)
+
+               RR_ALU, RM_ALU : MEM_WB_ALUout <= #2 EX_MEM_ALUout;
+
+               LOAD           : MEM_WB_LMD    <= #2 Mem[EX_MEM_ALUout];
+
+               STORE          : if(TAKEN_BRANCH == 0)
+                                    Mem[EX_MEM_ALUout] <= #2 EX_MEM_B;
+
+            endcase
+            
+        end
+    end
+    
+    //------WB------//
+    always @(posedge clk1) begin
+        if(TAKEN_BRANCH == 0)       //Disable write if branch taken
+            case (MEM_WB_type)
+
+               RR_ALU : Reg[MEM_WB_IR[15:11]] <= #2 MEM_WB_ALUout;  //rd
+               RM_ALU : Reg[MEM_WB_IR[20:16]] <= #2 MEM_WB_ALUout; //rt
+               LOAD   : Reg[MEM_WB_IR[20:16]] <= #2 MEM_WB_LMD;       //rt
+               HALT   : HALTED                <= #2 1'b1;
+
+            endcase  
     end
 
 
